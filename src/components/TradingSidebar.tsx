@@ -19,7 +19,11 @@ import {
   Star,
   Search,
   FileText,
-  ChartLine
+  ChartLine,
+  Shield,
+  Brain,
+  Newspaper,
+  Clock
 } from "lucide-react";
 import type { DashboardSection } from './TradingDashboard';
 
@@ -35,19 +39,19 @@ const menuItems = [
     icon: BarChart3,
   },
   {
+    title: "Broker Integration",
+    section: 'broker-integration' as DashboardSection,
+    icon: Shield,
+  },
+  {
     title: "Market Data",
     section: 'market' as DashboardSection,
     icon: ChartLine,
   },
   {
-    title: "Positions",
+    title: "Positions & Orders",
     section: 'positions' as DashboardSection,
     icon: TrendingUp,
-  },
-  {
-    title: "Orders",
-    section: 'orders' as DashboardSection,
-    icon: FileText,
   },
   {
     title: "Strategies",
@@ -55,19 +59,19 @@ const menuItems = [
     icon: Star,
   },
   {
-    title: "ML Models",
+    title: "ML Predictions",
     section: 'ml-models' as DashboardSection,
-    icon: Search,
+    icon: Brain,
   },
   {
-    title: "Sentiment",
+    title: "Sentiment Analysis",
     section: 'sentiment' as DashboardSection,
-    icon: TrendingUp,
+    icon: Newspaper,
   },
   {
     title: "Backtest",
     section: 'backtest' as DashboardSection,
-    icon: BarChart3,
+    icon: Clock,
   },
   {
     title: "Settings",
