@@ -12,14 +12,14 @@ import {
   SidebarHeader
 } from "@/components/ui/sidebar";
 import { 
-  chart-bar, 
-  trending-up, 
-  settings, 
-  log-in,
-  star,
-  search,
-  file-text,
-  chart-line
+  BarChart3, 
+  TrendingUp, 
+  Settings, 
+  LogIn,
+  Star,
+  Search,
+  FileText,
+  ChartLine
 } from "lucide-react";
 import type { DashboardSection } from './TradingDashboard';
 
@@ -32,47 +32,47 @@ const menuItems = [
   {
     title: "Dashboard",
     section: 'overview' as DashboardSection,
-    icon: chart-bar,
+    icon: BarChart3,
   },
   {
     title: "Market Data",
     section: 'market' as DashboardSection,
-    icon: chart-line,
+    icon: ChartLine,
   },
   {
     title: "Positions",
     section: 'positions' as DashboardSection,
-    icon: trending-up,
+    icon: TrendingUp,
   },
   {
     title: "Orders",
     section: 'orders' as DashboardSection,
-    icon: file-text,
+    icon: FileText,
   },
   {
     title: "Strategies",
     section: 'strategies' as DashboardSection,
-    icon: star,
+    icon: Star,
   },
   {
     title: "ML Models",
     section: 'ml-models' as DashboardSection,
-    icon: search,
+    icon: Search,
   },
   {
     title: "Sentiment",
     section: 'sentiment' as DashboardSection,
-    icon: trending-up,
+    icon: TrendingUp,
   },
   {
     title: "Backtest",
     section: 'backtest' as DashboardSection,
-    icon: chart-bar,
+    icon: BarChart3,
   },
   {
     title: "Settings",
     section: 'settings' as DashboardSection,
-    icon: settings,
+    icon: Settings,
   },
 ];
 
@@ -82,7 +82,7 @@ export function TradingSidebar({ activeSection, onSectionChange }: TradingSideba
       <SidebarHeader className="p-6">
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center">
-            <chart-bar className="w-5 h-5 text-white" />
+            <BarChart3 className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-trading-text">AlgoTrader</h1>

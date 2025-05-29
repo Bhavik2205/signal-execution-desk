@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { trending-up, trending-down } from "lucide-react";
+import { TrendingUp, TrendingDown, ChartLine } from "lucide-react";
 
 const marketData = [
   { symbol: 'NIFTY 50', price: 19485.25, change: +125.80, changePercent: +0.65 },
@@ -29,9 +29,9 @@ export function MarketOverview() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-trading-text">{item.symbol}</h3>
                 {item.change > 0 ? (
-                  <trending-up className="w-4 h-4 text-trading-profit" />
+                  <TrendingUp className="w-4 h-4 text-trading-profit" />
                 ) : (
-                  <trending-down className="w-4 h-4 text-trading-loss" />
+                  <TrendingDown className="w-4 h-4 text-trading-loss" />
                 )}
               </div>
               <div className="space-y-1">
@@ -69,7 +69,7 @@ export function MarketOverview() {
         <CardContent>
           <div className="h-64 bg-trading-bg rounded-lg flex items-center justify-center border border-trading-bg-card">
             <div className="text-center">
-              <chart-line className="w-12 h-12 text-trading-text-muted mx-auto mb-2" />
+              <ChartLine className="w-12 h-12 text-trading-text-muted mx-auto mb-2" />
               <p className="text-trading-text-muted">Interactive Chart Component</p>
               <p className="text-sm text-trading-text-muted">Real-time data visualization will be implemented here</p>
             </div>
