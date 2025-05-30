@@ -3,6 +3,7 @@ import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PauseCircle, PlayCircle } from 'lucide-react';
+import axios from 'axios';
 
 interface MarketSymbolData {
   symbol: string;
@@ -10,6 +11,20 @@ interface MarketSymbolData {
   change: number;
   changePercent: number;
 }
+
+const SYMBOL_MAP: Record<string, string> = {
+  'NIFTY 50 (NSE)': 'NIFTY 50 (NSE)',
+  'NIFTY BANK (NSE)': 'NIFTY BANK (NSE)',
+  'RELIANCE (NSE)': 'RELIANCE (NSE)',
+  'TCS (NSE)': 'TCS (NSE)',
+};
+
+const SYMBOL_MAP1: Record<string, string> = {
+  'NIFTY 50 (NSE)': 'NIFTY 50',
+  'NIFTY BANK (NSE)': 'NIFTY BANK',
+  'RELIANCE (NSE)': 'RELIANCE',
+  'TCS (NSE)': 'TCS',
+};
 
 export function DashboardHeader() {
   const [connectionStatus, setConnectionStatus] = React.useState<'connected' | 'disconnected' | 'connecting'>('connected');
@@ -19,13 +34,64 @@ export function DashboardHeader() {
   // --- New State for Portfolio Value ---
   const [portfolioValue, setPortfolioValue] = React.useState(1234567.89); // Initial portfolio value
   const [livePrices, setLivePrices] = React.useState<MarketSymbolData[]>([
-    { symbol: 'NIFTY 50 (NSE)', price: 22500.50, change: 123.45, changePercent: 0.55 },
-    { symbol: 'NIFTY BANK (NSE)', price: 48000.75, change: -75.20, changePercent: -0.16 },
-    { symbol: 'RELIANCE (NSE)', price: 2950.20, change: 15.30, changePercent: 0.52 },
-    { symbol: 'TCS (NSE)', price: 3900.10, change: -20.50, changePercent: -0.52 },
+    { symbol: 'NIFTY 50 (NSE)', price: 0, change: 0, changePercent: 0 },
+    { symbol: 'NIFTY BANK (NSE)', price: 0, change: 0, changePercent: 0 },
+    { symbol: 'RELIANCE (NSE)', price: 0, change: 0, changePercent: 0 },
+    { symbol: 'TCS (NSE)', price: 0, change: 0, changePercent: 0 },
   ]);
 
   const wsRef = useRef<WebSocket | null>(null);
+
+  const isMarketOpen = () => {
+    const now = new Date();
+    const istNow = new Date(
+      now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })
+    );
+    const hours = istNow.getHours();
+    const minutes = istNow.getMinutes();
+    const day = istNow.getDay();
+
+    if (day === 0 || day === 6) return false;
+    const totalMinutes = hours * 60 + minutes;
+    return totalMinutes >= 555 && totalMinutes <= 930;
+  };
+
+  // Fetch fallback data using REST API
+  const fetchLatestTick = async (symbolDisplay: string) => {
+    const symbolApi = SYMBOL_MAP1[symbolDisplay];
+    try {
+      const response = await fetch(`http://localhost:8000/api/instrument?symbol=${symbolApi}`);
+      if (!response.ok) throw new Error('API error');
+      const data = await response.json();
+
+      // The API response uses key like "NSE:RELIANCE"
+      const key = `NSE:${symbolApi}`;
+      const info = data[key];
+
+      if (!info) throw new Error('Symbol data not found in response');
+
+      const lastPrice = info.last_price;
+      const netChange = info.net_change;
+      const changePercent = lastPrice !== 0 ? (netChange / (lastPrice - netChange)) * 100 : 0;
+
+      setLivePrices(prev =>
+        prev.map(p =>
+          p.symbol === symbolDisplay
+            ? { ...p, price: lastPrice, change: netChange, changePercent }
+            : p
+        )
+      );
+    } catch (err) {
+      console.error(`Error fetching instrument for ${symbolDisplay}:`, err);
+    }
+  };
+
+  // Fetch all symbols initially or when fallback is needed
+  const fetchAllPricesFallback = async () => {
+    await Promise.all(
+      Object.keys(SYMBOL_MAP).map(symbol => fetchLatestTick(symbol))
+    );
+  };
 
   // useEffect hook to update the time every second
   React.useEffect(() => {
@@ -36,72 +102,73 @@ export function DashboardHeader() {
     return () => clearInterval(timerId);
   }, []); // Empty dependency array means this effect runs only once after the initial render
 
+  const connectRef = React.useRef<() => void>(() => { });
   // Establish WebSocket connection
   React.useEffect(() => {
     let ws: WebSocket | null = null;
     let reconnectTimeout: NodeJS.Timeout;
-  
+
     const connect = () => {
       ws = new WebSocket('ws://localhost:8000/ws');
       wsRef.current = ws;
-  
+
       ws.onopen = () => {
         console.log('✅ WebSocket connected');
         setConnectionStatus('connected');
       };
-  
+
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          const lastPrice = data.tick.LastPrice;
+          const netChange = data.tick.NetChange;
+          const changePercent = (netChange / (lastPrice - netChange)) * 100;
+
           console.log('Received symbol data:', data);
-      
-          setLivePrices((prevPrices) =>
-            prevPrices.map((item) => {
-              if (item.symbol === data.symbol) {
-                const lastPrice = data.tick.LastPrice;
-                const netChange = data.tick.NetChange;
-                // Calculate changePercent = (NetChange / (LastPrice - NetChange)) * 100
-                const changePercent = lastPrice && netChange ? (netChange / (lastPrice - netChange)) * 100 : 0;
-      
-                console.log(`Updating ${item.symbol} with price ${lastPrice}`);
-      
-                return {
-                  ...item,
-                  price: lastPrice,
-                  change: netChange,
-                  changePercent: changePercent,
-                };
-              }
-              return item;
-            })
+
+          setLivePrices(prev =>
+            prev.map(p =>
+              SYMBOL_MAP[p.symbol] === data.symbol
+                ? { ...p, price: lastPrice, change: netChange, changePercent }
+                : p
+            )
           );
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
         }
       };
-  
+
       ws.onclose = (event) => {
         console.log(`❌ WebSocket disconnected. Reconnecting in 3s...`, event.reason);
         setConnectionStatus('disconnected');
+
+        if (!isMarketOpen()) {
+          console.log("🔕 Market closed - Using fallback prices");
+          fetchAllPricesFallback();
+        }
+
         reconnectTimeout = setTimeout(() => {
           connect();
         }, 3000);
       };
-  
+
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
         // The socket will close after an error, so no need to explicitly reconnect here.
       };
     };
-  
+    // expose connect to outside
+    connectRef.current = connect;
+
     connect(); // initiate the first connection
-  
+    fetchAllPricesFallback(); // fetch on start
+
     return () => {
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (ws) ws.close();
     };
   }, []);
-  
+
   // Format the time using the currentTime state
   const formattedTime = currentTime.toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -115,6 +182,11 @@ export function DashboardHeader() {
     setConnectionStatus(prevStatus =>
       prevStatus === 'connected' ? 'disconnected' : 'connected'
     );
+    if (connectionStatus === 'connected') {
+      wsRef.current?.close();
+    } else {
+      connectRef.current?.();
+    }
   };
 
   return (
@@ -201,9 +273,8 @@ export function DashboardHeader() {
             <span className="font-semibold text-trading-text">{data.symbol}:</span>
             <span className="ml-2">₹{data.price.toLocaleString('en-IN')}</span>
             <span
-              className={`ml-2 font-medium ${
-                data.change >= 0 ? 'text-trading-profit' : 'text-trading-loss'
-              }`}
+              className={`ml-2 font-medium ${data.change >= 0 ? 'text-trading-profit' : 'text-trading-loss'
+                }`}
             >
               ({data.change >= 0 ? '+' : ''}
               {data.change.toFixed(2)} / {data.changePercent >= 0 ? '+' : ''}
