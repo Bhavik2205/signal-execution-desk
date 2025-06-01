@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, CheckCircle, XCircle, Bot, HeartPulse, HardDrive, CircleDot, ChartLine } from "lucide-react";
 import { SystemHealthPanel } from './ui/systemHealthPanel';
 import { PositionsPanel } from './PositionsPanel';
-import { OrdersPanel } from './OrdersPanel';
 
 interface MetricData {
   symbol: string;
@@ -145,10 +144,6 @@ export function MarketOverview() {
         ))}
       </div>
       <SystemHealthPanel/>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <PositionsPanel />
-              <OrdersPanel />
-            </div>
     </div>
   );
 }

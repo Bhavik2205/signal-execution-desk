@@ -5,6 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { PauseCircle, PlayCircle } from 'lucide-react';
 import axios from 'axios';
 
+interface DashboardHeaderProps {
+  brokerConnectionStatus: 'connected' | 'disconnected' | 'connecting';
+  setBrokerConnectionStatus: React.Dispatch<React.SetStateAction<'connected' | 'disconnected' | 'connecting'>>;
+  brokerConnectRef: React.MutableRefObject<() => void>;
+}
+
+
 interface MarketSymbolData {
   symbol: string;
   price: number;
@@ -26,9 +33,10 @@ const SYMBOL_MAP1: Record<string, string> = {
   'TCS (NSE)': 'TCS',
 };
 
-export function DashboardHeader() {
+export function DashboardHeader({ brokerConnectionStatus, setBrokerConnectionStatus, brokerConnectRef }: DashboardHeaderProps) {
   const [connectionStatus, setConnectionStatus] = React.useState<'connected' | 'disconnected' | 'connecting'>('connected');
   const [tradingMode, setTradingMode] = React.useState<'live' | 'paper'>('paper');
+  const [username, setUsername] = React.useState<string | null>('Demo');
   // State to hold the current date and time, which will be updated every second
   const [currentTime, setCurrentTime] = React.useState(new Date());
   // --- New State for Portfolio Value ---
@@ -209,6 +217,33 @@ export function DashboardHeader() {
           </div>
 
           <div className="flex items-center space-x-4">
+            <span
+              className={`
+    inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium
+    ${brokerConnectionStatus === 'connected'
+                  ? 'bg-green-100 text-green-700'
+                  : brokerConnectionStatus === 'connecting'
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-red-100 text-red-700'}
+  `}
+            >
+              <span
+                className={`
+      w-2 h-2 rounded-full
+      ${brokerConnectionStatus === 'connected'
+                    ? 'bg-green-500'
+                    : brokerConnectionStatus === 'connecting'
+                      ? 'bg-yellow-500'
+                      : 'bg-red-500'}
+    `}
+              />
+              {brokerConnectionStatus === 'connected'
+                ? 'Broker Connected'
+                : brokerConnectionStatus === 'connecting'
+                  ? 'Connecting...'
+                  : 'Broker Disconnected'}
+            </span>
+
             {/* --- Portfolio Value Badge (Now Bigger!) --- */}
             <Badge
               variant="outline"
@@ -263,6 +298,11 @@ export function DashboardHeader() {
                 </>
               )}
             </Button>
+            {username && (
+              <Badge variant="outline" className="border-trading-text-muted font-bold text-sm py-2 px-4 rounded-md">
+                {username}
+              </Badge>
+            )}
           </div>
         </div>
       </header>
