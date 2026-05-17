@@ -11,13 +11,21 @@ import { SentimentPanel } from './SentimentPanel';
 import { BrokerIntegrationPanel } from './BrokerIntegration';
 import MarketDataPage from './MarketData';
 import { SettingsPage } from './Settings';
+import ProfilePanel from './ProfilePanel';
 
-export type DashboardSection = 'overview' | 'broker-integration' | 'market' | 'positions' | 'strategies' | 'ml-models' | 'sentiment' | 'backtest' | 'settings';
+export type DashboardSection = 'overview' | 'broker-integration' | 'market' | 'positions' | 'strategies' | 'ml-models' | 'sentiment' | 'backtest' | 'settings' | 'profile';
 
 const TradingDashboard = () => {
-  const [activeSection, setActiveSection] = useState<DashboardSection>('overview');
+  const [activeSection, setActiveSection] = useState<DashboardSection>(() => {
+    return (sessionStorage.getItem('dashboard_section') as DashboardSection) || 'overview';
+  });
   const [brokerConnectionStatus, setBrokerConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
   const brokerConnectRef = useRef<() => void>(() => {});
+
+  const handleSectionChange = (section: DashboardSection) => {
+    sessionStorage.setItem('dashboard_section', section);
+    setActiveSection(section);
+  };
 
   const renderActiveSection = () => {
     switch (activeSection) {
@@ -43,6 +51,8 @@ const TradingDashboard = () => {
         return <div className="trading-card">Backtesting Module Coming Soon</div>;
       case 'settings':
         return <SettingsPage />;
+      case 'profile':
+        return <ProfilePanel />;
       default:
         return <MarketOverview />;
     }
@@ -51,12 +61,13 @@ const TradingDashboard = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-trading-bg">
-        <TradingSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+        <TradingSidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
         <main className="flex-1 flex flex-col overflow-hidden">
           <DashboardHeader
             brokerConnectionStatus={brokerConnectionStatus}
             setBrokerConnectionStatus={setBrokerConnectionStatus}
             brokerConnectRef={brokerConnectRef}
+            onSectionChange={handleSectionChange}
           />
           <div className="flex-1 overflow-auto p-6">
             {renderActiveSection()}

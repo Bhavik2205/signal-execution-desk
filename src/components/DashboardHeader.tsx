@@ -2,13 +2,19 @@
 import React, { useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PauseCircle, PlayCircle } from 'lucide-react';
+import { PauseCircle, PlayCircle, LogOut } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { logoutApi } from '@/lib/api';
+import { getStoredUser } from '@/lib/auth';
+
+import type { DashboardSection } from './TradingDashboard';
 
 interface DashboardHeaderProps {
   brokerConnectionStatus: 'connected' | 'disconnected' | 'connecting';
   setBrokerConnectionStatus: React.Dispatch<React.SetStateAction<'connected' | 'disconnected' | 'connecting'>>;
   brokerConnectRef: React.MutableRefObject<() => void>;
+  onSectionChange: (section: DashboardSection) => void;
 }
 
 
@@ -33,10 +39,12 @@ const SYMBOL_MAP1: Record<string, string> = {
   'TCS (NSE)': 'TCS',
 };
 
-export function DashboardHeader({ brokerConnectionStatus, setBrokerConnectionStatus, brokerConnectRef }: DashboardHeaderProps) {
+export function DashboardHeader({ brokerConnectionStatus, setBrokerConnectionStatus, brokerConnectRef, onSectionChange }: DashboardHeaderProps) {
+  const navigate = useNavigate();
   const [connectionStatus, setConnectionStatus] = React.useState<'connected' | 'disconnected' | 'connecting'>('connected');
   const [tradingMode, setTradingMode] = React.useState<'live' | 'paper'>('paper');
-  const [username, setUsername] = React.useState<string | null>('Demo');
+  const storedUser = getStoredUser();
+  const [username] = React.useState<string | null>(storedUser?.userName || storedUser?.email || 'User');
   // State to hold the current date and time, which will be updated every second
   const [currentTime, setCurrentTime] = React.useState(new Date());
   // --- New State for Portfolio Value ---
@@ -197,6 +205,11 @@ export function DashboardHeader({ brokerConnectionStatus, setBrokerConnectionSta
     }
   };
 
+  const handleLogout = async () => {
+    await logoutApi();
+    navigate('/login');
+  };
+
   return (
     <>
       <header className="bg-trading-bg-light border-b border-trading-bg-card px-6 py-4">
@@ -299,10 +312,23 @@ export function DashboardHeader({ brokerConnectionStatus, setBrokerConnectionSta
               )}
             </Button>
             {username && (
-              <Badge variant="outline" className="border-trading-text-muted font-bold text-sm py-2 px-4 rounded-md">
+              <Badge
+                variant="outline"
+                className="border-trading-text-muted font-bold text-sm py-2 px-4 rounded-md cursor-pointer hover:bg-trading-bg-card transition-colors"
+                onClick={() => onSectionChange('profile')}
+              >
                 {username}
               </Badge>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-trading-text-muted hover:text-trading-loss hover:bg-trading-bg-card"
+              title="Logout"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </header>
