@@ -401,6 +401,8 @@ export interface NotificationChannel {
   is_enabled: boolean;
   /** Credentials are present. The API never returns the values themselves. */
   configured: boolean;
+  /** Credentials are sealed at rest. False means no server encryption key. */
+  encrypted: boolean;
   updated_at: string;
 }
 

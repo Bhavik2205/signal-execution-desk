@@ -28,18 +28,64 @@ import { ApiError } from "@/lib/api";
 import type { ChannelType } from "@/lib/api-types";
 import { ApiState } from "./ApiState";
 
-/** Per-channel credential fields. Values are write-only: the API never
- *  returns them, so the inputs start blank even for a configured channel. */
-const CHANNEL_FIELDS: Record<ChannelType, { key: string; label: string; placeholder: string }[]> = {
+interface Field {
+  key: string;
+  label: string;
+  placeholder: string;
+  /** Non-secret fields render as plain text so they stay readable. */
+  secret?: boolean;
+  hint?: string;
+}
+
+/**
+ * Per-channel fields. Secret values are write-only: the API never returns
+ * them, so those inputs start blank even for a configured channel and a blank
+ * submission leaves the stored value untouched.
+ */
+const CHANNEL_FIELDS: Record<ChannelType, Field[]> = {
   telegram: [
-    { key: "botToken", label: "Bot token", placeholder: "123456:ABC-DEF..." },
-    { key: "chatId", label: "Chat ID", placeholder: "-1001234567890" },
+    {
+      key: "botToken",
+      label: "Bot token",
+      placeholder: "123456:ABC-DEF...",
+      secret: true,
+      hint: "From @BotFather",
+    },
+    {
+      key: "chatId",
+      label: "Chat ID",
+      placeholder: "-1001234567890",
+      hint: "Negative for groups and channels. Message the bot, then check /getUpdates.",
+    },
   ],
   whatsapp: [
-    { key: "apiUrl", label: "API URL", placeholder: "https://api.example.com/send" },
-    { key: "phoneNumber", label: "Phone number", placeholder: "+919876543210" },
+    {
+      key: "accessToken",
+      label: "Access token",
+      placeholder: "EAAG...",
+      secret: true,
+      hint: "Meta Cloud API. Leave blank to use a webhook gateway instead.",
+    },
+    { key: "phoneNumberId", label: "Phone number ID", placeholder: "123456789012345" },
+    {
+      key: "apiUrl",
+      label: "Webhook URL",
+      placeholder: "https://gateway.example.com/send",
+      hint: "Only for a self-hosted gateway. Ignored when an access token is set.",
+    },
+    { key: "authHeader", label: "Webhook auth header", placeholder: "Bearer ...", secret: true },
+    {
+      key: "recipient",
+      label: "Recipient",
+      placeholder: "+919876543210",
+      hint: "International format, including the country code.",
+    },
   ],
 };
+
+const TELEGRAM_HELP =
+  "Create a bot with @BotFather, send it a message, then find your chat ID at " +
+  "https://api.telegram.org/bot<token>/getUpdates";
 
 const CHANNELS: ChannelType[] = ["telegram", "whatsapp"];
 
@@ -137,8 +183,9 @@ export function NotificationsPanel() {
         </Card>
 
         <p className="text-xs text-trading-text/50">
-          No delivery worker is running yet, so messages are recorded as PENDING and are not
-          actually sent. Channel configuration and the log are live.
+          Messages are queued as PENDING and delivered by a background worker, which retries
+          transient failures and marks permanent ones (bad token, unknown chat) FAILED straight
+          away. Alerts fire on fills and when the kill switch trips.
         </p>
       </div>
     </ApiState>
@@ -150,7 +197,7 @@ function ChannelCard({
   existing,
 }: {
   type: ChannelType;
-  existing?: { is_enabled: boolean; configured: boolean };
+  existing?: { is_enabled: boolean; configured: boolean; encrypted?: boolean };
 }) {
   const save = useSaveNotificationChannel();
   const remove = useDeleteNotificationChannel();
@@ -216,6 +263,11 @@ function ChannelCard({
           {type}
         </CardTitle>
         <div className="flex items-center gap-2">
+          {existing?.configured && !existing.encrypted && (
+            <Badge variant="outline" className="border-trading-info text-trading-info" title="Set TRADINGBOT_ENCRYPTION_KEY on the server to encrypt stored credentials">
+              unencrypted
+            </Badge>
+          )}
           {existing?.configured ? (
             <Badge variant="outline" className="border-trading-profit text-trading-profit">
               <CheckCircle2 className="mr-1 h-3 w-3" />
@@ -231,17 +283,26 @@ function ChannelCard({
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {type === "telegram" && (
+          <p className="text-xs text-trading-text/50">{TELEGRAM_HELP}</p>
+        )}
+
         {fields.map((f) => (
           <div key={f.key} className="space-y-1.5">
             <Label htmlFor={`${type}-${f.key}`}>{f.label}</Label>
             <Input
               id={`${type}-${f.key}`}
-              type="password"
+              type={f.secret ? "password" : "text"}
               autoComplete="off"
-              placeholder={existing?.configured ? "•••••• (leave blank to keep)" : f.placeholder}
+              placeholder={
+                f.secret && existing?.configured
+                  ? "•••••• (leave blank to keep)"
+                  : f.placeholder
+              }
               value={config[f.key] ?? ""}
               onChange={(e) => setConfig({ ...config, [f.key]: e.target.value })}
             />
+            {f.hint && <p className="text-xs text-trading-text/50">{f.hint}</p>}
           </div>
         ))}
 
