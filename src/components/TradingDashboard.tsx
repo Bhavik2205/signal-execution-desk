@@ -20,8 +20,10 @@ import { LiveModelsPanel } from './LiveModelsPanel';
 import { LiveBrokerPanel } from './LiveBrokerPanel';
 import { LiveMarketData } from './LiveMarketData';
 import { BacktestPanel } from './BacktestPanel';
+import { NotificationsPanel } from './NotificationsPanel';
+import { LiveSettingsPanel } from './LiveSettingsPanel';
 
-export type DashboardSection = 'overview' | 'broker-integration' | 'market' | 'positions' | 'strategies' | 'execution' | 'ml-models' | 'sentiment' | 'backtest' | 'settings';
+export type DashboardSection = 'overview' | 'broker-integration' | 'market' | 'positions' | 'strategies' | 'execution' | 'notifications' | 'ml-models' | 'sentiment' | 'backtest' | 'settings';
 
 const TradingDashboard = () => {
   const [activeSection, setActiveSection] = useState<DashboardSection>('overview');
@@ -52,8 +54,10 @@ const TradingDashboard = () => {
         return <LiveSentimentPanel />;
       case 'backtest':
         return <BacktestPanel />;
+      case 'notifications':
+        return <NotificationsPanel />;
       case 'settings':
-        return <SettingsPage />;
+        return <LiveSettingsPanel />;
       default:
         return <LiveMarketOverview />;
     }

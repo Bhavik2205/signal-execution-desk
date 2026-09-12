@@ -153,3 +153,56 @@ export function websocketURL(path = "/ws"): string {
   const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${scheme}//${window.location.host}${path}`;
 }
+
+/** PUT a resource and unwrap the success envelope. */
+export async function apiPut<T>(path: string, body?: unknown): Promise<T> {
+  try {
+    const res = await http.put<SuccessResponse<T>>(path, body ?? {});
+    return res.data.data;
+  } catch (err) {
+    throw toApiError(err);
+  }
+}
+
+/** DELETE a resource and unwrap the success envelope. */
+export async function apiDelete<T>(path: string, params?: Record<string, unknown>): Promise<T> {
+  try {
+    const res = await http.delete<SuccessResponse<T>>(path, { params });
+    return res.data.data;
+  } catch (err) {
+    throw toApiError(err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Settings
+//
+// The settings handler predates the {data, meta} envelope and returns
+// {section, data} directly, so these two calls bypass apiGet/apiPut rather
+// than unwrapping a field that is not there.
+// ---------------------------------------------------------------------------
+
+import type { SettingsSection } from "./api-types";
+
+export async function getSettingsSection(section: string): Promise<SettingsSection> {
+  try {
+    const res = await http.get<SettingsSection>("/settings", { params: { section } });
+    return {
+      section: res.data?.section ?? section,
+      data: res.data?.data ?? {},
+    };
+  } catch (err) {
+    throw toApiError(err);
+  }
+}
+
+export async function putSettingsSection(
+  section: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await http.put("/settings", { section, data });
+  } catch (err) {
+    throw toApiError(err);
+  }
+}

@@ -227,3 +227,95 @@ export function useAddToWatchlist() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["watchlist"] }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+import type {
+  ChannelType,
+  NotificationChannel,
+  NotificationHistoryItem,
+} from "@/lib/api-types";
+import { apiDelete, apiPut } from "@/lib/api";
+
+export function useNotificationChannels() {
+  return useQuery({
+    queryKey: ["notifications", "channels"],
+    queryFn: () => apiGet<NotificationChannel[]>("/notifications/channels"),
+    refetchInterval: POLL.slow,
+  });
+}
+
+export function useNotificationHistory(limit = 50) {
+  return useQuery({
+    queryKey: ["notifications", "history", limit],
+    queryFn: () => apiGet<NotificationHistoryItem[]>("/notifications/history", { limit }),
+    refetchInterval: POLL.normal,
+  });
+}
+
+export function useSaveNotificationChannel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { channel_type: ChannelType; is_enabled: boolean; config: Record<string, string> }) =>
+      apiPut<NotificationChannel>("/notifications/channels", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+export function useDeleteNotificationChannel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (channelType: ChannelType) =>
+      apiDelete<unknown>("/notifications/channels", { channel_type: channelType }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+export function useTestNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (channelType: ChannelType) =>
+      apiPost<{ queued: boolean; note: string }>(`/notifications/test?channel_type=${channelType}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", "history"] }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+import { getSettingsSection, putSettingsSection } from "@/lib/api";
+
+/** Known settings sections, matching what the backend accepts. */
+export const SETTINGS_SECTIONS = [
+  "general",
+  "zerodha",
+  "strategy",
+  "data",
+  "notifications",
+  "performance",
+] as const;
+
+export type SettingsSectionName = (typeof SETTINGS_SECTIONS)[number];
+
+export function useSettings(section: SettingsSectionName) {
+  return useQuery({
+    queryKey: ["settings", section],
+    queryFn: () => getSettingsSection(section),
+    // Settings change only when someone edits them; polling would be waste.
+    staleTime: 30_000,
+  });
+}
+
+export function useSaveSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { section: SettingsSectionName; data: Record<string, unknown> }) =>
+      putSettingsSection(args.section, args.data),
+    onSuccess: (_res, args) => {
+      qc.invalidateQueries({ queryKey: ["settings", args.section] });
+    },
+  });
+}

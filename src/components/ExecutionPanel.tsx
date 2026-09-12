@@ -7,6 +7,7 @@ import {
   Database,
   Gauge,
   Play,
+  Receipt,
   ShieldAlert,
 } from "lucide-react";
 
@@ -27,6 +28,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 import { useExecutionStatus, useKillSwitch, useResumeTrading } from "@/hooks/useTradingApi";
+import { useTradingStream } from "@/hooks/useTradingStream";
 import { ApiError } from "@/lib/api";
 import { ApiState } from "./ApiState";
 
@@ -37,7 +39,24 @@ const inr = (n: number) =>
 const pct = (used: number, cap: number) => (cap > 0 ? Math.min(100, (used / cap) * 100) : 0);
 
 export function ExecutionPanel() {
-  const { data, isLoading, error, refetch } = useExecutionStatus();
+  const polled = useExecutionStatus();
+  const stream = useTradingStream();
+
+  // The websocket pushes the same state once a second. Polling stays as the
+  // fallback so a dropped socket degrades refresh rate rather than blanking
+  // the panel.
+  const data = stream.snapshot
+    ? {
+        mode: stream.snapshot.mode,
+        enabled: stream.snapshot.enabled,
+        guard: stream.snapshot.guard,
+        executor: stream.snapshot.executor,
+        paper: stream.snapshot.paper,
+        persistence: polled.data?.persistence,
+      }
+    : polled.data;
+
+  const { isLoading, error, refetch } = polled;
   const kill = useKillSwitch();
   const resume = useResumeTrading();
   const { toast } = useToast();
@@ -106,6 +125,17 @@ export function ExecutionPanel() {
                   }
                 >
                   {data.mode === "LIVE" ? "LIVE — REAL MONEY" : "PAPER"}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={
+                    stream.live
+                      ? "border-trading-profit text-trading-profit"
+                      : "border-trading-text/30 text-trading-text/50"
+                  }
+                  title={stream.live ? "Streaming over /ws/trading" : "Websocket down; falling back to polling"}
+                >
+                  {stream.live ? "LIVE FEED" : "POLLING"}
                 </Badge>
                 {data.guard?.tripped ? (
                   <Badge variant="outline" className="border-trading-loss text-trading-loss">
@@ -191,6 +221,48 @@ export function ExecutionPanel() {
                   <Stat label="Placed" value={data.guard.placed} />
                   <Stat label="Refused" value={data.guard.refused} tone={data.guard.refused > 0 ? "warn" : undefined} />
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Simulated trading costs. A strategy that loses to its own
+              charges looks identical to a bad strategy without this. */}
+          {data.paper?.costs && data.paper.costs.total > 0 && (
+            <Card className="trading-card border-trading-bg-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-trading-text">
+                  <Receipt className="w-5 h-5" />
+                  Simulated charges
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+                  <Stat label="Brokerage" value={inr(data.paper.costs.brokerage)} />
+                  <Stat label="STT" value={inr(data.paper.costs.stt)} />
+                  <Stat label="Exchange" value={inr(data.paper.costs.exchange_txn)} />
+                  <Stat label="SEBI" value={inr(data.paper.costs.sebi)} />
+                  <Stat label="Stamp duty" value={inr(data.paper.costs.stamp_duty)} />
+                  <Stat label="GST" value={inr(data.paper.costs.gst)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4 border-t border-trading-bg-card pt-3 text-sm sm:grid-cols-4">
+                  <Stat label="Total charges" value={inr(data.paper.costs.total)} tone="warn" />
+                  <Stat label="Turnover" value={inr(data.paper.turnover ?? 0)} />
+                  <Stat
+                    label="Avg slippage"
+                    value={`${(data.paper.avg_slippage_bps ?? 0).toFixed(2)} bps`}
+                  />
+                  <Stat
+                    label="Partial / rejected"
+                    value={`${data.paper.partial_fills ?? 0} / ${data.paper.rejected_fills ?? 0}`}
+                    tone={(data.paper.rejected_fills ?? 0) > 0 ? "bad" : undefined}
+                  />
+                </div>
+                {(data.paper.rejected_fills ?? 0) > 0 && (
+                  <p className="text-xs text-trading-text/60">
+                    Rejected fills mean the strategy asked for more size than those bars could
+                    supply. Live you would not have got that size either.
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

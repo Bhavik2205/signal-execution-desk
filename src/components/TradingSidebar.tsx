@@ -24,7 +24,8 @@ import {
   Brain,
   Newspaper,
   Clock,
-  ShieldAlert
+  ShieldAlert,
+  Bell
 } from "lucide-react";
 import type { DashboardSection } from './TradingDashboard';
 
@@ -78,6 +79,11 @@ const menuItems = [
     title: "Backtest",
     section: 'backtest' as DashboardSection,
     icon: Clock,
+  },
+  {
+    title: "Notifications",
+    section: 'notifications' as DashboardSection,
+    icon: Bell,
   },
   {
     title: "Settings",

@@ -79,6 +79,15 @@ export interface PaperStats {
   unrealized_pnl: number;
   net_pnl: number;
   open_positions: Position[];
+
+  /** Itemised charges: brokerage, STT, exchange, SEBI, stamp duty, GST. */
+  costs?: CostBreakdown;
+  turnover?: number;
+  /** Turnover-weighted, so one tiny fill cannot skew it. */
+  avg_slippage_bps?: number;
+  /** Fills cut short, or refused outright, by the volume participation cap. */
+  partial_fills?: number;
+  rejected_fills?: number;
 }
 
 // --- Orders and trades ----------------------------------------------------
@@ -358,6 +367,11 @@ export interface BacktestResult {
   win_rate_pct: number;
   max_drawdown_pct: number;
   sharpe: number;
+  costs?: CostBreakdown;
+  turnover?: number;
+  avg_slippage_bps?: number;
+  partial_fills?: number;
+  rejected_fills?: number;
   trades: BacktestTrade[];
   equity_curve: EquityPoint[];
   duration_ms: number;
@@ -375,4 +389,64 @@ export interface Watchlist {
   id: number;
   name: string;
   items: WatchlistItem[];
+}
+
+// --- Notifications --------------------------------------------------------
+
+export type ChannelType = "telegram" | "whatsapp";
+
+export interface NotificationChannel {
+  id: number;
+  channel_type: ChannelType;
+  is_enabled: boolean;
+  /** Credentials are present. The API never returns the values themselves. */
+  configured: boolean;
+  updated_at: string;
+}
+
+export interface NotificationHistoryItem {
+  id: number;
+  channel_type: string;
+  event_type: string;
+  message: string;
+  status: "PENDING" | "SENT" | "FAILED";
+  error_message?: string;
+  created_at: string;
+  sent_at?: string;
+}
+
+// --- Settings -------------------------------------------------------------
+
+/**
+ * The settings endpoint predates the {data, meta} envelope and returns this
+ * shape directly, so it needs its own fetch path.
+ */
+export interface SettingsSection {
+  section: string;
+  data: Record<string, unknown>;
+}
+
+// --- Paper trading costs --------------------------------------------------
+
+export interface CostBreakdown {
+  brokerage: number;
+  stt: number;
+  exchange_txn: number;
+  sebi: number;
+  stamp_duty: number;
+  gst: number;
+  total: number;
+}
+
+// --- Live trading stream (/ws/trading) ------------------------------------
+
+export interface TradingSnapshot {
+  type: "trading";
+  timestamp: string;
+  mode: string;
+  enabled: boolean;
+  engine?: EngineStats;
+  paper?: PaperStats;
+  guard?: GuardStats;
+  executor?: ExecutorStats;
 }
