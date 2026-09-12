@@ -135,3 +135,95 @@ export function useResumeTrading() {
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Market, health, sentiment, models, backtest, watchlist
+// ---------------------------------------------------------------------------
+
+import type {
+  BacktestRequest,
+  BacktestResult,
+  BrokerStatus,
+  Health,
+  MarketOverview,
+  ModelsResponse,
+  Quote,
+  SentimentResponse,
+  Watchlist,
+} from "@/lib/api-types";
+
+export function useHealth() {
+  return useQuery({
+    queryKey: ["health"],
+    queryFn: () => apiGet<Health>("/health"),
+    refetchInterval: POLL.normal,
+  });
+}
+
+export function useMarketOverview() {
+  return useQuery({
+    queryKey: ["market", "overview"],
+    queryFn: () => apiGet<MarketOverview>("/market/overview"),
+    refetchInterval: POLL.fast,
+  });
+}
+
+export function useQuotes(symbols: string[]) {
+  return useQuery({
+    queryKey: ["quotes", symbols.join(",")],
+    queryFn: () => apiGet<Quote[]>("/quotes", { symbols: symbols.join(",") }),
+    enabled: symbols.length > 0,
+    refetchInterval: POLL.fast,
+  });
+}
+
+export function useBrokerStatus() {
+  return useQuery({
+    queryKey: ["broker", "status"],
+    queryFn: () => apiGet<BrokerStatus>("/brokers/zerodha/status"),
+    refetchInterval: POLL.slow,
+  });
+}
+
+export function useSentiment(hours = 24, limit = 50) {
+  return useQuery({
+    queryKey: ["sentiment", hours, limit],
+    queryFn: () => apiGet<SentimentResponse>("/sentiment", { hours, limit }),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useModels() {
+  return useQuery({
+    queryKey: ["models"],
+    queryFn: () => apiGet<ModelsResponse>("/models"),
+    refetchInterval: 60_000,
+  });
+}
+
+/**
+ * Runs a backtest. Deliberately a mutation rather than a query: it is an
+ * explicit, expensive action, not something to fire on render or refetch.
+ */
+export function useRunBacktest() {
+  return useMutation({
+    mutationFn: (req: BacktestRequest) => apiPost<BacktestResult>("/backtest/run", req),
+  });
+}
+
+export function useWatchlist() {
+  return useQuery({
+    queryKey: ["watchlist"],
+    queryFn: () => apiGet<Watchlist>("/watchlists/default"),
+    refetchInterval: POLL.slow,
+  });
+}
+
+export function useAddToWatchlist() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (item: { instrument_token: number; symbol: string }) =>
+      apiPost<unknown>("/watchlists/default/items", item),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["watchlist"] }),
+  });
+}

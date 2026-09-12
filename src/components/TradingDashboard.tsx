@@ -14,6 +14,12 @@ import { SettingsPage } from './Settings';
 import { LivePositionsPanel } from './LivePositionsPanel';
 import { LiveStrategyPanel } from './LiveStrategyPanel';
 import { ExecutionPanel } from './ExecutionPanel';
+import { LiveMarketOverview } from './LiveMarketOverview';
+import { LiveSentimentPanel } from './LiveSentimentPanel';
+import { LiveModelsPanel } from './LiveModelsPanel';
+import { LiveBrokerPanel } from './LiveBrokerPanel';
+import { LiveMarketData } from './LiveMarketData';
+import { BacktestPanel } from './BacktestPanel';
 
 export type DashboardSection = 'overview' | 'broker-integration' | 'market' | 'positions' | 'strategies' | 'execution' | 'ml-models' | 'sentiment' | 'backtest' | 'settings';
 
@@ -22,36 +28,34 @@ const TradingDashboard = () => {
   const [brokerConnectionStatus, setBrokerConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
   const brokerConnectRef = useRef<() => void>(() => {});
 
+  // Every section below is backed by the Go API. The original mock-data
+  // components (MarketOverview, PositionsPanel, StrategyPanel, MLModelsPanel,
+  // SentimentPanel, BrokerIntegrationPanel, MarketDataPage) are kept in the
+  // tree as references but are no longer routed to.
   const renderActiveSection = () => {
     switch (activeSection) {
       case 'overview':
-        return (
-          <div className="space-y-6">
-            <MarketOverview />
-          </div>
-        );
+        return <LiveMarketOverview />;
       case 'broker-integration':
-        return <BrokerIntegrationPanel/>;
+        return <LiveBrokerPanel />;
       case 'market':
-        return <MarketDataPage />;
+        return <LiveMarketData />;
       case 'positions':
-        // Live data from the Go API. PositionsPanel is kept as the original
-        // mock-data reference but is no longer routed to.
         return <LivePositionsPanel />;
       case 'strategies':
         return <LiveStrategyPanel />;
       case 'execution':
         return <ExecutionPanel />;
       case 'ml-models':
-        return <MLModelsPanel />;
+        return <LiveModelsPanel />;
       case 'sentiment':
-        return <SentimentPanel />;
+        return <LiveSentimentPanel />;
       case 'backtest':
-        return <div className="trading-card">Backtesting Module Coming Soon</div>;
+        return <BacktestPanel />;
       case 'settings':
         return <SettingsPage />;
       default:
-        return <MarketOverview />;
+        return <LiveMarketOverview />;
     }
   };
 

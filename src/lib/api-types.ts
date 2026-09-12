@@ -176,3 +176,203 @@ export interface Instrument {
   tick_size: number;
   lot_size: number;
 }
+
+// --- Quotes and market overview ------------------------------------------
+
+export interface QuoteOHLC {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+export interface Quote {
+  symbol: string;
+  instrumentToken: number;
+  lastPrice: number;
+  netChange: number;
+  percentChange: number;
+  volumeTraded: number;
+  ohlc: QuoteOHLC;
+  updatedAt: string;
+}
+
+export interface MarketOverviewItem {
+  symbol: string;
+  lastPrice: number;
+  percentChange: number;
+  volume: number;
+  bid: number;
+  ask: number;
+  updatedAt: string;
+}
+
+export interface MarketBreadth {
+  advancers: number;
+  decliners: number;
+  unchanged: number;
+}
+
+export interface MarketOverview {
+  indices: MarketOverviewItem[];
+  topGainers: MarketOverviewItem[];
+  topLosers: MarketOverviewItem[];
+  mostActiveByVolume: MarketOverviewItem[];
+  breadth?: MarketBreadth;
+  updatedAt?: string;
+}
+
+// --- Health and broker ----------------------------------------------------
+
+export interface DependencyStatus {
+  status: string;
+  latencyMs?: number;
+  message?: string;
+}
+
+export interface Health {
+  status: string;
+  service: string;
+  version: string;
+  uptimeSeconds: number;
+  mode: string;
+  dependencies: {
+    postgres: DependencyStatus;
+    redis: DependencyStatus;
+    zerodha: DependencyStatus;
+  };
+}
+
+export interface BrokerStatus {
+  broker: string;
+  connected: boolean;
+  lastSyncedAt?: string;
+  tradingEnabled: boolean;
+  userId?: string;
+  userName?: string;
+  email?: string;
+}
+
+// --- Sentiment ------------------------------------------------------------
+
+export interface SentimentArticle {
+  id: number;
+  source: string;
+  title: string;
+  description: string;
+  url: string;
+  image_url: string;
+  published_at: string;
+  sentiment_score: number;
+  sentiment_label: string;
+  analyzed: boolean;
+}
+
+export interface SentimentSummary {
+  total: number;
+  analyzed: number;
+  positive: number;
+  neutral: number;
+  negative: number;
+  avg_score: number;
+  window_hours: number;
+}
+
+export interface SentimentResponse {
+  summary: SentimentSummary;
+  articles: SentimentArticle[];
+}
+
+// --- ML models ------------------------------------------------------------
+
+export interface ModelFile {
+  name: string;
+  size_bytes: number;
+  modified_at: string;
+  present: boolean;
+}
+
+export interface ModelPipeline {
+  total_articles: number;
+  scored_articles: number;
+  coverage_pct: number;
+  last_analyzed_at?: string | null;
+  last_article_at?: string | null;
+}
+
+export interface ModelsResponse {
+  inference_available: boolean;
+  inference_note: string;
+  model_dir: string;
+  files: ModelFile[];
+  pipeline: ModelPipeline;
+}
+
+// --- Backtest -------------------------------------------------------------
+
+export interface BacktestRequest {
+  strategy_name: string;
+  instruments: number[];
+  interval: string;
+  from: string;
+  to: string;
+  initial_capital: number;
+  slippage_bps?: number;
+  fee_bps?: number;
+  params?: Record<string, number>;
+}
+
+export interface BacktestTrade {
+  timestamp: string;
+  instrument_token: number;
+  symbol: string;
+  action: string;
+  side: string;
+  reason: string;
+  quantity: number;
+  price: number;
+}
+
+export interface EquityPoint {
+  timestamp: string;
+  equity: number;
+}
+
+export interface BacktestResult {
+  strategy_name: string;
+  interval: string;
+  from: string;
+  to: string;
+  initial_capital: number;
+  final_equity: number;
+  candles_replayed: number;
+  total_trades: number;
+  round_trips: number;
+  wins: number;
+  losses: number;
+  realized_pnl: number;
+  unrealized_pnl: number;
+  fees_paid: number;
+  net_pnl: number;
+  return_pct: number;
+  win_rate_pct: number;
+  max_drawdown_pct: number;
+  sharpe: number;
+  trades: BacktestTrade[];
+  equity_curve: EquityPoint[];
+  duration_ms: number;
+}
+
+// --- Watchlist ------------------------------------------------------------
+
+export interface WatchlistItem {
+  id: number;
+  instrument_token: number;
+  symbol: string;
+}
+
+export interface Watchlist {
+  id: number;
+  name: string;
+  items: WatchlistItem[];
+}

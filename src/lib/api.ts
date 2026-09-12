@@ -138,3 +138,18 @@ export async function login(email: string, password: string): Promise<void> {
 export function logout(): void {
   setToken(null);
 }
+
+/**
+ * Absolute websocket URL for the market data feed.
+ *
+ * Derived from the current page so the scheme matches (wss:// on HTTPS) and
+ * the dev-server proxy forwards it. Hardcoding ws://localhost:<port> breaks
+ * both TLS and any deployment that is not the developer's laptop.
+ */
+export function websocketURL(path = "/ws"): string {
+  if (BASE_URL) {
+    return BASE_URL.replace(/^http/, "ws") + path;
+  }
+  const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${scheme}//${window.location.host}${path}`;
+}

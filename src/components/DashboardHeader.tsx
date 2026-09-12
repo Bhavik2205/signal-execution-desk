@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PauseCircle, PlayCircle } from 'lucide-react';
 import axios from 'axios';
+import { apiGet, websocketURL } from '@/lib/api';
+import type { Quote } from '@/lib/api-types';
 
 interface DashboardHeaderProps {
   brokerConnectionStatus: 'connected' | 'disconnected' | 'connecting';
@@ -64,33 +66,33 @@ export function DashboardHeader({ brokerConnectionStatus, setBrokerConnectionSta
     return totalMinutes >= 555 && totalMinutes <= 930;
   };
 
-  // Fetch fallback data using REST API
+  // Fetch fallback data using the REST API.
+  //
+  // Uses the shared API client rather than a hardcoded origin: requests go to
+  // /api/v1/... on the dev server, which proxies them to the Go backend on
+  // 8080. The old http://localhost:8000/api/instrument endpoint does not
+  // exist on this backend.
   const fetchLatestTick = async (symbolDisplay: string) => {
     const symbolApi = SYMBOL_MAP1[symbolDisplay];
     try {
-      const response = await fetch(`http://localhost:8000/api/instrument?symbol=${symbolApi}`);
-      if (!response.ok) throw new Error('API error');
-      const data = await response.json();
-
-      // The API response uses key like "NSE:RELIANCE"
-      const key = `NSE:${symbolApi}`;
-      const info = data[key];
-
+      const quotes = await apiGet<Quote[]>('/quotes', { symbols: `NSE:${symbolApi}` });
+      const info = quotes?.[0];
       if (!info) throw new Error('Symbol data not found in response');
-
-      const lastPrice = info.last_price;
-      const netChange = info.net_change;
-      const changePercent = lastPrice !== 0 ? (netChange / (lastPrice - netChange)) * 100 : 0;
 
       setLivePrices(prev =>
         prev.map(p =>
           p.symbol === symbolDisplay
-            ? { ...p, price: lastPrice, change: netChange, changePercent }
+            ? {
+                ...p,
+                price: info.lastPrice,
+                change: info.netChange,
+                changePercent: info.percentChange,
+              }
             : p
         )
       );
     } catch (err) {
-      console.error(`Error fetching instrument for ${symbolDisplay}:`, err);
+      console.error(`Error fetching quote for ${symbolDisplay}:`, err);
     }
   };
 
@@ -117,7 +119,9 @@ export function DashboardHeader({ brokerConnectionStatus, setBrokerConnectionSta
     let reconnectTimeout: NodeJS.Timeout;
 
     const connect = () => {
-      ws = new WebSocket('ws://localhost:8000/ws');
+      // Same-origin so the Vite proxy (and any reverse proxy in production)
+      // forwards it, and so the scheme follows the page: wss:// under HTTPS.
+      ws = new WebSocket(websocketURL());
       wsRef.current = ws;
 
       ws.onopen = () => {

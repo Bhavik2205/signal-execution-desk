@@ -67,6 +67,15 @@ log in again.
 | `useCandles` | `GET /api/v1/market/candles` | 15s |
 | `useKillSwitch` | `POST /api/v1/execution/kill` | — |
 | `useResumeTrading` | `POST /api/v1/execution/resume` | — |
+| `useHealth` | `GET /api/v1/health` | 5s |
+| `useMarketOverview` | `GET /api/v1/market/overview` | 2s |
+| `useQuotes` | `GET /api/v1/quotes?symbols=` | 2s |
+| `useBrokerStatus` | `GET /api/v1/brokers/zerodha/status` | 15s |
+| `useSentiment` | `GET /api/v1/sentiment?hours=&limit=` | 60s |
+| `useModels` | `GET /api/v1/models` | 60s |
+| `useRunBacktest` | `POST /api/v1/backtest/run` | — |
+| `useWatchlist` | `GET /api/v1/watchlists/default` | 15s |
+| `useAddToWatchlist` | `POST /api/v1/watchlists/default/items` | — |
 
 Positions and execution state poll fastest because they drive decisions;
 candles only change when a bar finalises, so polling them as often would be
@@ -130,14 +139,42 @@ LIVE_TRADING_CONFIRM=I_UNDERSTAND_THIS_PLACES_REAL_ORDERS
 The header badge in the Execution panel shows `PAPER` or
 `LIVE — REAL MONEY` accordingly.
 
-## Still on mock data
+## Panel coverage
 
-These panels were not part of this integration and still render static data:
-`MarketOverview`, `MLModelsPanel`, `SentimentPanel`, `BrokerIntegration`,
-`MarketData`, `Settings`. The original `PositionsPanel` and `StrategyPanel`
-are kept as mock references; the dashboard routes to `LivePositionsPanel` and
-`LiveStrategyPanel` instead.
+Every panel is now backed by the API:
 
-`DashboardHeader` still hardcodes `http://localhost:8000` for its quote lookup
-and websocket, which does not match the backend's port 8080 — it needs the
-same treatment.
+| Panel | Component | Endpoint |
+| --- | --- | --- |
+| Dashboard | `LiveMarketOverview` | `/health`, `/market/overview`, `/pnl` |
+| Broker Integration | `LiveBrokerPanel` | `/brokers/zerodha/status`, `/execution/status` |
+| Market Data | `LiveMarketData` | `/market/candles`, `/market/instruments`, `/watchlists/default` |
+| Positions & Orders | `LivePositionsPanel` | `/positions`, `/orders`, `/trades` |
+| Strategies | `LiveStrategyPanel` | `/strategies` |
+| Execution | `ExecutionPanel` | `/execution/*` |
+| ML Predictions | `LiveModelsPanel` | `/models` |
+| Sentiment | `LiveSentimentPanel` | `/sentiment` |
+| Backtest | `BacktestPanel` | `/backtest/run` |
+| Settings | `SettingsPage` | `/settings` (pre-existing) |
+
+The original mock-data components (`MarketOverview`, `PositionsPanel`,
+`StrategyPanel`, `MLModelsPanel`, `SentimentPanel`, `BrokerIntegration`,
+`MarketData`) remain in the tree as references but are no longer routed to.
+
+`DashboardHeader` now uses the shared API client and a same-origin websocket
+URL instead of the hardcoded `http://localhost:8000`, which pointed at a port
+and an endpoint (`/api/instrument`) that this backend does not have.
+
+## Backtesting
+
+The Backtest panel runs a real replay: stored candles are fed through the same
+strategy engine and paper broker the live pipeline uses.
+
+It needs candle data. With no market feed running, seed some first:
+
+```bash
+cd Go-project && go run ./cmd/seed --days 30 --intervals 5m
+```
+
+Results are deliberately conservative — fills cross the spread and pay fees,
+and positions still open at the end are excluded from the win/loss count.
+Treat it as a filter for bad strategies, not a forecast.
