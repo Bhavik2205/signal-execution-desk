@@ -11,8 +11,11 @@ import { SentimentPanel } from './SentimentPanel';
 import { BrokerIntegrationPanel } from './BrokerIntegration';
 import MarketDataPage from './MarketData';
 import { SettingsPage } from './Settings';
+import { LivePositionsPanel } from './LivePositionsPanel';
+import { LiveStrategyPanel } from './LiveStrategyPanel';
+import { ExecutionPanel } from './ExecutionPanel';
 
-export type DashboardSection = 'overview' | 'broker-integration' | 'market' | 'positions' | 'strategies' | 'ml-models' | 'sentiment' | 'backtest' | 'settings';
+export type DashboardSection = 'overview' | 'broker-integration' | 'market' | 'positions' | 'strategies' | 'execution' | 'ml-models' | 'sentiment' | 'backtest' | 'settings';
 
 const TradingDashboard = () => {
   const [activeSection, setActiveSection] = useState<DashboardSection>('overview');
@@ -32,9 +35,13 @@ const TradingDashboard = () => {
       case 'market':
         return <MarketDataPage />;
       case 'positions':
-        return <PositionsPanel />;
+        // Live data from the Go API. PositionsPanel is kept as the original
+        // mock-data reference but is no longer routed to.
+        return <LivePositionsPanel />;
       case 'strategies':
-        return <StrategyPanel />;
+        return <LiveStrategyPanel />;
+      case 'execution':
+        return <ExecutionPanel />;
       case 'ml-models':
         return <MLModelsPanel />;
       case 'sentiment':

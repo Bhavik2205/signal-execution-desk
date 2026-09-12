@@ -23,7 +23,8 @@ import {
   Shield,
   Brain,
   Newspaper,
-  Clock
+  Clock,
+  ShieldAlert
 } from "lucide-react";
 import type { DashboardSection } from './TradingDashboard';
 
@@ -57,6 +58,11 @@ const menuItems = [
     title: "Strategies",
     section: 'strategies' as DashboardSection,
     icon: Star,
+  },
+  {
+    title: "Execution",
+    section: 'execution' as DashboardSection,
+    icon: ShieldAlert,
   },
   {
     title: "ML Predictions",
